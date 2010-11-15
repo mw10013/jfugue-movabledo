@@ -1,0 +1,17 @@
+# jfugue-movabledo
+
+Movable do support for JFugue (http://www.jfugue.org).
+
+## Usage
+
+java -classpath ./lib/clojure-1.2.0.jar:./lib/clojure-contrib-1.2.0.jar:./lib/jfugue-4.0.3.jar:./jfugue-movabledo-0.0.1.jar org.jfugue.MovableDoNotation -p "1 3 5"
+
+## Installation
+
+
+## License
+
+Copyright (C) 2010 Michael Wu
+
+GNU Lesser General Public License 2.1
+
