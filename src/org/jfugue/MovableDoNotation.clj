@@ -51,9 +51,9 @@
 ;  (println "getPatternForRootNote - pattern")
   (.getPatternForRootNote this (MusicStringParser/getNote pattern)))
 
-(defn format-degree [{:keys [degree root-note-value]}]
+(defn format-degree [{:keys [degree root-note-value offset]}]
   (let [degree-normalized (dec degree) degree-vector-count (count degree-vector)]
-    (str "[" (+  root-note-value
+    (str "[" (+  root-note-value offset
                  (* 12 (quot degree-normalized degree-vector-count)) 
                  (nth degree-vector (mod degree-normalized degree-vector-count)))  "]")))
  
@@ -63,12 +63,16 @@
   (condp = (:state m)
       :degree (cond
                (Character/isDigit c) (assoc m :degree (+ (* (:degree m) 10) (Character/digit c 10)))
+               (= c \<) (assoc m :offset (+ (:offset m) -12))
+               (= c \>) (assoc m :offset (+ (:offset m) 12))
                (Character/isWhitespace c) (assoc m :state :whitespace
-                                                 :buf (conj (:buf m) (format-degree m) " ") :degree 0)
+                                                 :buf (conj (:buf m) (format-degree m) " ") :degree 0 :offset 0)
                :else (assoc m :state :char
-                            :buf (conj (:buf m) (if (= (:degree m) 0) "" (format-degree m)) c) :degree 0))
+                            :buf (conj (:buf m) (if (= (:degree m) 0) "" (format-degree m)) c) :degree 0 :offset 0))
       :whitespace (cond
                    (Character/isDigit c) (assoc m :state :degree :degree (+ (* (:degree m) 10) (Character/digit c 10)))
+                   (= c \<) (assoc m :state :degree :offset (+ (:offset m) -12))
+                   (= c \>) (assoc m :state :degree :offset (+ (:offset m) 12))
                    (Character/isWhitespace c) m
                    :else (assoc m :state :char :buf (conj (:buf m) c)))
       :char (cond
@@ -78,13 +82,13 @@
  
 (defn -getPatternForRootNote-Note [this note]
 ;  (println "getPatternForRootNote - note3")
-  (let [m (reduce parse-char {:state :degree :root-note-value (.getValue note) :degree 0 :buf []}
+  (let [m (reduce parse-char {:state :degree :root-note-value (.getValue note) :degree 0 :offset 0 :buf []}
                   (str (:music-string @(.state this)) " "))]
     (Pattern. (apply str (:buf m)))))
 
 (defn -main [& args]
   (with-command-line args
-      "MovableDoNotation: use scale degrees"
+      "MovableDoNotation: use scale degrees: 1 3 5 instead of <1> <5> <8>3"
       [[note "The root note for the pattern" 60]
        [play? p? "Play."] strings]
       (let [note (Note. (Integer. note))
