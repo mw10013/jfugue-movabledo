@@ -30,8 +30,6 @@
              [getPatternForRootNote [org.jfugue.Note] org.jfugue.Pattern]
              [compile [] void]]))
 
-; TODO: octave
-
 (def ^{:private true} degree-vector [0 2 4 5 7 9 11])
 
 (defn -compile [this]
