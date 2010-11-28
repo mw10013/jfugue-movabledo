@@ -15,9 +15,7 @@
 
 (ns org.jfugue.MovableDoNotation
   (:import (org.jfugue Pattern Note MusicStringParser Player IntervalNotation MusicStringParser MidiRenderer)
-           (javax.sound.midi Sequencer Sequence Transmitter Receiver ShortMessage MidiSystem)
-           (java.net InetAddress)
-           (com.illposed.osc OSCPort OSCPortOut OSCPortIn OSCMessage OSCListener))
+           (javax.sound.midi Sequencer Sequence Transmitter Receiver ShortMessage MidiSystem))
   (:use clojure.contrib.command-line)
   (:gen-class
    :init init
@@ -27,13 +25,9 @@
              [setMusicStringWithMovableDo [String] void]
              [getPatternForRootNote [String] org.jfugue.Pattern]
              [getPatternForRootNote [org.jfugue.Pattern] org.jfugue.Pattern]
-             [getPatternForRootNote [org.jfugue.Note] org.jfugue.Pattern]
-             [compile [] void]]))
+             [getPatternForRootNote [org.jfugue.Note] org.jfugue.Pattern]]))
 
 (def ^{:private true} degree-vector [0 2 4 5 7 9 11])
-
-(defn -compile [this]
-  (compile 'org.jfugue.MovableDoNotation))
 
 (defn -init [music-string]
   [[] (atom {:music-string music-string})])
@@ -45,11 +39,9 @@
   (swap! (.state this) assoc :music-string music-string))
 
 (defn -getPatternForRootNote-String [this music-string]
-;  (println "getPatternForRootNote - string")
   (.getPatternForRootNote this (Pattern. music-string)))
 
 (defn -getPatternForRootNote-Pattern [this pattern]
-;  (println "getPatternForRootNote - pattern")
   (.getPatternForRootNote this (MusicStringParser/getNote pattern)))
 
 (defn format-degree [{:keys [degree root-note-value offset]}]
@@ -82,38 +74,9 @@
              :else (assoc m :buf (conj (:buf m) c)))))
  
 (defn -getPatternForRootNote-Note [this note]
-;  (println "getPatternForRootNote - note3")
   (let [m (reduce parse-char {:state :degree :root-note-value (.getValue note) :degree 0 :offset 0 :buf []}
                   (str (:music-string @(.state this)) " "))]
     (Pattern. (apply str (:buf m)))))
-
-(defn output-short-message [m type]
-  (println type ": " (.getData1 m) " " (.getData2 m) " chan: " (.getChannel m)))
-
-(defn decode-short-message [m osc-out]
-;  (println (class osc-out))
-;  (println "decode-short-message1: " (class m) ": " (.getCommand m) " " (.getData1 m) " " (.getData2 m) " chan: " (.getChannel m))
-  (condp = (.getCommand m)
-      (ShortMessage/NOTE_ON) (do (.send osc-out (OSCMessage. "/isynth/chan1/note" (object-array [(.getData1 m) (.getData2 m)]))) (output-short-message m "noteon"))
-      (ShortMessage/NOTE_OFF) (do (.send osc-out (OSCMessage. "/isynth/chan1/note" (object-array [(.getData1 m) 0]))) (output-short-message m "noteoff"))
-      (ShortMessage/CONTROL_CHANGE) (output-short-message m "cc")
-      (println "unknown: " (.getCommand m) " " (.getData1 m) " " (.getData2 m) " chan: " (.getChannel m))))
-
-(defn osc-play [music-string player]
-  (with-open [osc-out (OSCPortOut. (java.net.InetAddress/getLocalHost) 5432)]
-    (let [pattern (Pattern. music-string)
-          sequence (.getSequence player pattern)
-          sequencer (MidiSystem/getSequencer false)]
-      (.open sequencer)
-      (.. sequencer (getTransmitter) (setReceiver (reify Receiver
-                                                         (send [this midi-message timestamp]
-                                                               (when (instance? ShortMessage midi-message) (decode-short-message midi-message osc-out)))
-                                                         )))
-      (doto sequencer (.setSequence sequence) (.start))
-      (while (.isRunning sequencer) (Thread/sleep 20))
-      (.close sequencer)
-      ))
-  )
 
 (alter-var-root #'*out* (constantly *out*)) 
 
@@ -121,12 +84,10 @@
   (with-command-line args
       "MovableDoNotation: use scale degrees: 1 3 5 instead of <1> <5> <8>"
       [[note "The root note for the pattern" 60]
-       [play? p? "Play."]
-       [osc? o? "OSC"] strings]
+       [play? p? "Play."] strings]
       (let [note (Note. (Integer. note))
-            player (if (or play? osc?) (Player.) nil)]
+            player (if  play? (Player.) nil)]
         (doseq [s strings]
           (let [music-string (.. (org.jfugue.MovableDoNotation. s) (getPatternForRootNote note) (getMusicString))]
             (println s ": " music-string)
-            (if play? (.play player music-string))
-            (if osc? (osc-play music-string player)))))))
+            (if play? (.play player music-string)))))))
