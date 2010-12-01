@@ -1,3 +1,18 @@
+; Copyright (c) Michael Wu.  All rights reserved.
+; This library is free software; you can redistribute it and/or
+; modify it under the terms of the GNU Lesser General Public
+; License as published by the Free Software Foundation; either
+; version 2.1 of the License, or any later version.
+;
+; This library is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+; Lesser General Public License for more details.
+;
+; You should have received a copy of the GNU Lesser General Public
+; License along with this library; if not, write to the Free Software
+; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 (ns org.jfugue.OscPlayer
   (:import (org.jfugue MovableDoNotation Pattern Note MusicStringParser IntervalNotation MusicStringParser MidiRenderer)
            (javax.sound.midi Sequencer Sequence Transmitter Receiver ShortMessage MidiSystem)
@@ -31,15 +46,15 @@
 
 (defn decode-short-message [m osc-out]
   (condp = (.getCommand m)
-      (ShortMessage/NOTE_ON) (do (.send osc-out (OSCMessage. "/isynth/chan1/note" (object-array [(.getData1 m) (.getData2 m)])))
+      (ShortMessage/NOTE_ON) (do (.send osc-out (OSCMessage. "/renoise/trigger/note_on" (object-array [-1 -1 (.getData1 m) (.getData2 m)])))
                                  (output-short-message m "noteon"))
-      (ShortMessage/NOTE_OFF) (do (.send osc-out (OSCMessage. "/isynth/chan1/note" (object-array [(.getData1 m) 0])))
+      (ShortMessage/NOTE_OFF) (do (.send osc-out (OSCMessage. "/renoise/trigger/note_off" (object-array [-1 -1 (.getData1 m)])))
                                   (output-short-message m "noteoff"))
       (ShortMessage/CONTROL_CHANGE) (output-short-message m "cc")
       (output-short-message m "unknown")))
 
 (defn -play-Pattern [this pattern]
-  (with-open [osc-out (OSCPortOut. (java.net.InetAddress/getLocalHost) 5432)]
+  (with-open [osc-out (OSCPortOut. (java.net.InetAddress/getLocalHost) 8000)]
     (let [sequence (.getSequence this pattern)
           sequencer (MidiSystem/getSequencer false)]
       (.open sequencer)

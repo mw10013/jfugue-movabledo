@@ -6,6 +6,6 @@
                  [jfugue "4.0.3"]
                  [org.clojars.mw10013/javaosc "20060402.0.0"]]
   :dev-dependencies [[swank-clojure "1.2.1"]]
-  :aot [org.jfugue.MovableDoNotation]
+  :aot [org.jfugue.MovableDoNotation org.jfugue.OscPlayer]
   :main org.jfugue.MovableDoNotation)
 
