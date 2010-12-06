@@ -17,7 +17,7 @@
   (:import (org.jfugue MovableDoNotation Pattern Note MusicStringParser IntervalNotation MusicStringParser MidiRenderer)
            (javax.sound.midi Sequencer Sequence Transmitter Receiver ShortMessage MidiSystem)
            (java.net InetAddress)
-           (com.illposed.osc OSCPort OSCPortOut OSCPortIn OSCMessage OSCListener))
+           (com.illposed.osc OSCPort OSCPortOut OSCPortIn OSCBundle OSCMessage OSCListener))
   (:use clojure.contrib.command-line)
   (:gen-class
    :init init
@@ -46,15 +46,15 @@
 
 (defn decode-short-message [m osc-out]
   (condp = (.getCommand m)
-      (ShortMessage/NOTE_ON) (do (.send osc-out (OSCMessage. "/renoise/trigger/note_on" (object-array [-1 -1 (.getData1 m) (.getData2 m)])))
+      (ShortMessage/NOTE_ON) (do (.send osc-out (OSCMessage. "/mw10013/m4l/track/1/note" (object-array [(.getData1 m) (.getData2 m)])))
                                  (output-short-message m "noteon"))
-      (ShortMessage/NOTE_OFF) (do (.send osc-out (OSCMessage. "/renoise/trigger/note_off" (object-array [-1 -1 (.getData1 m)])))
+      (ShortMessage/NOTE_OFF) (do (.send osc-out (OSCMessage. "/mw10013/m4l/track/1/note" (object-array [(.getData1 m) 0])))
                                   (output-short-message m "noteoff"))
       (ShortMessage/CONTROL_CHANGE) (output-short-message m "cc")
       (output-short-message m "unknown")))
 
 (defn -play-Pattern [this pattern]
-  (with-open [osc-out (OSCPortOut. (java.net.InetAddress/getLocalHost) 8000)]
+  (with-open [osc-out (OSCPortOut. (java.net.InetAddress/getLocalHost) 5432)]
     (let [sequence (.getSequence this pattern)
           sequencer (MidiSystem/getSequencer false)]
       (.open sequencer)
@@ -65,6 +65,21 @@
       (doto sequencer (.setSequence sequence) (.start))
       (while (.isRunning sequencer) (Thread/sleep 20))
       (.close sequencer))))
+
+; Packets seems to get dropped if not in bundle.
+(defn osc-m4l [bundle?]
+  (with-open [osc-out (OSCPortOut. (java.net.InetAddress/getLocalHost) 5432)]
+    (let [messages [(OSCMessage. "/mw10013/m4l/track/1/path" (object-array ["path" "live_set" "tracks" 0 "clip_slots" 0 "clip"]))
+                    (OSCMessage. "/mw10013/m4l/track/1/object" (object-array ["call" "select_all_notes"]))
+                    (OSCMessage. "/mw10013/m4l/track/1/object" (object-array ["call" "replace_selected_notes"]))
+                    (OSCMessage. "/mw10013/m4l/track/1/object" (object-array ["call" "notes" 1]))
+                    (OSCMessage. "/mw10013/m4l/track/1/object" (object-array ["call" "note" 60 (Float. 1.0)  (Float. 0.25) 100 0]))
+                    (OSCMessage. "/mw10013/m4l/track/1/object" (object-array ["call" "done"]))]]
+      (if bundle?
+        (let [bundle (OSCBundle.)]
+          (doseq [m messages] (.addPacket bundle m))
+          (.send osc-out bundle))
+        (doseq [m messages] (.send osc-out m))))))
 
 (alter-var-root #'*out* (constantly *out*)) 
 
