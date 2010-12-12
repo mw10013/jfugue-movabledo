@@ -1,4 +1,4 @@
-(defproject jfugue-movabledo "0.0.4"
+(defproject jfugue-movabledo "0.0.5"
   :description "Movable do support for JFugue (http://www.jfugue.org)"
   :license {:name "GNU Lesser General Public License 2.1"}
   :dependencies [[org.clojure/clojure "1.2.0"]

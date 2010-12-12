@@ -13,6 +13,8 @@
 ; License along with this library; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+; TODO: "1+3", "1_3"
+
 (ns org.jfugue.MovableDoNotation
   (:import (org.jfugue Pattern Note MusicStringParser Player IntervalNotation MusicStringParser MidiRenderer)
            (javax.sound.midi Sequencer Sequence Transmitter Receiver ShortMessage MidiSystem))
@@ -25,7 +27,8 @@
              [setMusicStringWithMovableDo [String] void]
              [getPatternForRootNote [String] org.jfugue.Pattern]
              [getPatternForRootNote [org.jfugue.Pattern] org.jfugue.Pattern]
-             [getPatternForRootNote [org.jfugue.Note] org.jfugue.Pattern]]))
+             [getPatternForRootNote [org.jfugue.Note] org.jfugue.Pattern]
+             [getPatternForMusicString [String org.jfugue.Note] org.jfugue.Pattern]]))
 
 (def ^{:private true} degree-vector [0 2 4 5 7 9 11])
 
@@ -77,6 +80,10 @@
   (let [m (reduce parse-char {:state :degree :root-note-value (.getValue note) :degree 0 :offset 0 :buf []}
                   (str (:music-string @(.state this)) " "))]
     (Pattern. (apply str (:buf m)))))
+
+(defn -getPatternForMusicString [this music-string root-note]
+  (.setMusicStringWithMovableDo this music-string)
+  (.getPatternForRootNote this  root-note))
 
 (alter-var-root #'*out* (constantly *out*)) 
 
